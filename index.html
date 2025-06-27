@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guitar Chord Trainer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: white;
+        }
+        
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        
+        .connected {
+            background: rgba(46, 204, 113, 0.3);
+            color: #2ECC71;
+        }
+        
+        .disconnected {
+            background: rgba(231, 76, 60, 0.3);
+            color: #E74C3C;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .mode-selector {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .device-setup {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .room-code {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #F39C12;
+            margin: 10px 0;
+            letter-spacing: 2px;
+        }
+        
+        .qr-code {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px auto;
+            width: fit-content;
+        }
+        
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        
+        button:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+        
+        button.active {
+            background: rgba(255,255,255,0.4);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        input {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 25px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            font-size: 1rem;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.3);
+            margin: 0 10px;
+            text-align: center;
+        }
+        
+        input::placeholder {
+            color: rgba(255,255,255,0.7);
+        }
+        
+        /* Teacher Interface */
+        .teacher-interface {
+            display: none;
+            text-align: center;
+            width: 100%;
+            max-width: 800px;
+        }
+        
+        .current-challenge {
+            background: rgba(255,255,255,0.1);
+            padding: 30px;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .challenge-chord {
+            font-size: 4rem;
+            font-weight: bold;
+            color: #F39C12;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .attempts {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+        }
+        
+        .attempt-dots {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .attempt-dot {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .attempt-dot.failed {
+            background: #E74C3C;
+        }
+        
+        .student-status {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        /* Student Interface */
+        .student-interface {
+            display: none;
+            width: 100vw;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        
+        .fullscreen-fretboard {
+            width: 90vw;
+            max-width: 900px;
+            height: 60vh;
+            background: linear-gradient(to bottom, #8B4513, #A0522D);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            border: 4px solid #654321;
+            position: relative;
+        }
+        
+        .neck {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to right, #D2691E, #CD853F);
+            border-radius: 15px;
+            border: 3px solid #8B4513;
+        }
+        
+        .frets, .strings, .finger-positions {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .fret {
+            position: absolute;
+            width: 4px;
+            height: 100%;
+            background: #C0C0C0;
+            box-shadow: 2px 0 3px rgba(0,0,0,0.3);
+        }
+        
+        .string {
+            position: absolute;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(to right, #FFD700, #FFA500);
+            box-shadow: 0 2px 3px rgba(0,0,0,0.3);
+        }
+        
+        .string.thick {
+            height: 4px;
+        }
+        
+        .finger-dot {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #FF6B6B, #FF4757);
+            border: 3px solid white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .finger-dot:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+        }
+        
+        .finger-dot.placed {
+            background: radial-gradient(circle at 30% 30%, #2ECC71, #27AE60);
+        }
+        
+        .finger-dot.target {
+            background: radial-gradient(circle at 30% 30%, #F39C12, #E67E22);
+            animation: pulse 1.5s infinite;
+        }
+        
+        .finger-dot.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+        }
+        
+        .fullscreen-info {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .waiting-message {
+            font-size: 1.5rem;
+            text-align: center;
+            opacity: 0.8;
+        }
+        
+        .string-labels {
+            position: absolute;
+            left: -60px;
+            top: 0;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            font-size: 18px;
+            font-weight: bold;
+            color: white;
+        }
+        
+        .fret-numbers {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+            font-size: 18px;
+            opacity: 0.9;
+            color: white;
+        }
+        
+        @media (max-width: 768px) {
+            .challenge-chord {
+                font-size: 3rem;
+            }
+            
+            .finger-dot {
+                width: 30px;
+                height: 30px;
+                font-size: 14px;
+            }
+            
+            .fullscreen-fretboard {
+                width: 95vw;
+                height: 50vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="connection-status disconnected" id="connectionStatus">
+        🔴 Disconnected
+    </div>
+
+    <div class="header">
+        <h1>🎸 Multi-Screen Guitar Trainer</h1>
+        <p>Learn guitar with synchronized teacher and student screens</p>
+    </div>
+
+    <!-- Mode Selection -->
+    <div class="mode-selector" id="modeSelector">
+        <button id="teacherBtn">Teacher Mode (Computer)</button>
+        <button id="studentBtn">Student Mode (Phone)</button>
+    </div>
+
+    <!-- Setup Interface -->
+    <div class="device-setup" id="deviceSetup">
+        <h3>Connect Devices</h3>
+        <p>Teacher creates a room, Student joins with the room code</p>
+        <div style="margin: 20px 0;">
+            <button id="createRoomBtn">Create Room</button>
+            <input type="text" id="roomCodeInput" placeholder="Enter Room Code" maxlength="4">
+            <button id="joinRoomBtn">Join Room</button>
+        </div>
+        <div id="roomInfo" style="display: none;">
+            <p>Room Code:</p>
+            <div class="room-code" id="roomCodeDisplay"></div>
+            <p>Share this code with the student device</p>
+            <div class="qr-code" id="qrCode"></div>
+        </div>
+    </div>
+
+    <!-- Teacher Interface -->
+    <div class="teacher-interface" id="teacherInterface">
+        <div class="current-challenge">
+            <div class="challenge-chord" id="challengeChord">C</div>
+            <div class="attempts">Attempts:</div>
+            <div class="attempt-dots" id="attemptDots">
+                <div class="attempt-dot"></div>
+                <div class="attempt-dot"></div>
+                <div class="attempt-dot"></div>
+            </div>
+            <div class="student-status" id="studentStatus">Waiting for student to attempt chord...</div>
+        </div>
+        <div class="controls">
+            <button id="nextChordBtn">Next Chord</button>
+            <button id="showSolutionBtn">Show Solution</button>
+            <button id="resetAttemptsBtn">Reset Attempts</button>
+        </div>
+    </div>
+
+    <!-- Student Interface -->
+    <div class="student-interface" id="studentInterface">
+        <div class="fullscreen-info">
+            <h2 id="studentChordName">Waiting for challenge...</h2>
+            <p id="studentInstructions">Place your fingers on the fretboard</p>
+        </div>
+        
+        <div class="fullscreen-fretboard">
+            <div class="string-labels">
+                <div>E</div>
+                <div>B</div>
+                <div>G</div>
+                <div>D</div>
+                <div>A</div>
+                <div>E</div>
+            </div>
+            
+            <div class="neck" id="studentNeck">
+                <div class="frets" id="studentFrets"></div>
+                <div class="strings" id="studentStrings"></div>
+                <div class="finger-positions" id="studentFingerPositions"></div>
+            </div>
+            
+            <div class="fret-numbers">
+                <span>1</span>
+                <span>2</span>
+                <span>3</span>
+                <span>4</span>
+                <span>5</span>
+            </div>
+        </div>
+        
+        <div style="margin-top: 30px; text-align: center;">
+            <button id="submitAttemptBtn" style="font-size: 1.2rem; padding: 15px 30px;">Submit Attempt</button>
+        </div>
+    </div>
+
+    <script>
+        // Chord database
+        const chords = {
+            'C': [0, 1, 0, 2, 3, -1],
+            'G': [3, 0, 0, 0, 2, 3],
+            'D': [-1, -1, 0, 2, 3, 2],
+            'A': [0, 2, 2, 2, 0, -1],
+            'E': [0, 0, 1, 2, 2, 0],
+            'F': [1, 1, 2, 3, 3, 1],
+            'Am': [0, 1, 2, 2, 0, -1],
+            'Em': [0, 0, 0, 2, 2, 0],
+            'Dm': [-1, -1, 0, 2, 3, 1]
+        };
+        
+        // Application state
+        let currentMode = null;
+        let roomCode = null;
+        let socket = null;
+        let currentChord = 'C';
+        let attempts = 0;
+        let userPositions = [null, null, null, null, null, null];
+        let showingSolution = false;
+        let chordKeys = Object.keys(chords);
+        let currentChordIndex = 0;
+        
+        // WebSocket connection (simulated with localStorage for demo)
+        function createWebSocketConnection() {
+            // In a real implementation, you'd use WebSocket server
+            // For demo purposes, we'll simulate with localStorage
+            const roomId = 'guitar_room_' + roomCode;
+            
+            // Simulate connection
+            document.getElementById('connectionStatus').textContent = '🟢 Connected';
+            document.getElementById('connectionStatus').className = 'connection-status connected';
+            
+            // Listen for changes
+            window.addEventListener('storage', (e) => {
+                if (e.key === roomId) {
+                    const data = JSON.parse(e.newValue);
+                    handleMessage(data);
+                }
+            });
+            
+            return {
+                send: (data) => {
+                    localStorage.setItem(roomId, JSON.stringify({
+                        ...data,
+                        timestamp: Date.now(),
+                        sender: currentMode
+                    }));
+                }
+            };
+        }
+        
+        function handleMessage(data) {
+            if (data.sender === currentMode) return; // Ignore own messages
+            
+            switch (data.type) {
+                case 'chord_challenge':
+                    if (currentMode === 'student') {
+                        setStudentChord(data.chord);
+                    }
+                    break;
+                case 'show_solution':
+                    if (currentMode === 'student') {
+                        showSolution();
+                    }
+                    break;
+                case 'attempt_result':
+                    if (currentMode === 'teacher') {
+                        handleAttemptResult(data.correct, data.positions);
+                    }
+                    break;
+                case 'reset_attempts':
+                    if (currentMode === 'student') {
+                        resetStudentAttempts();
+                    }
+                    break;
+            }
+        }
+        
+        function generateRoomCode() {
+            return Math.random().toString(36).substring(2, 6).toUpperCase();
+        }
+        
+        function generateQRCode(text) {
+            // Simple QR code placeholder - in real app, use QR library
+            return `<div style="width: 100px; height: 100px; background: #333; color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; text-align: center;">${text}</div>`;
+        }
+        
+        // Teacher mode functions
+        function startTeacherMode() {
+            currentMode = 'teacher';
+            roomCode = generateRoomCode();
+            
+            document.getElementById('modeSelector').style.display = 'none';
+            document.getElementById('deviceSetup').style.display = 'none';
+            document.getElementById('teacherInterface').style.display = 'block';
+            
+            document.getElementById('roomCodeDisplay').textContent = roomCode;
+            document.getElementById('roomInfo').style.display = 'block';
+            document.getElementById('qrCode').innerHTML = generateQRCode(roomCode);
+            
+            socket = createWebSocketConnection();
+            sendChordChallenge();
+        }
+        
+        function sendChordChallenge() {
+            socket.send({
+                type: 'chord_challenge',
+                chord: currentChord
+            });
+            
+            document.getElementById('challengeChord').textContent = currentChord;
+            document.getElementById('studentStatus').textContent = 'Challenge sent! Waiting for student...';
+        }
+        
+        function nextChord() {
+            currentChordIndex = (currentChordIndex + 1) % chordKeys.length;
+            currentChord = chordKeys[currentChordIndex];
+            attempts = 0;
+            showingSolution = false;
+            updateAttemptDots();
+            sendChordChallenge();
+        }
+        
+        function showSolutionToStudent() {
+            socket.send({
+                type: 'show_solution'
+            });
+            document.getElementById('studentStatus').textContent = 'Solution shown to student';
+        }
+        
+        function resetAttempts() {
+            attempts = 0;
+            showingSolution = false;
+            updateAttemptDots();
+            socket.send({
+                type: 'reset_attempts'
+            });
+            sendChordChallenge();
+        }
+        
+        function updateAttemptDots() {
+            const dots = document.querySelectorAll('.attempt-dot');
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('failed', index < attempts);
+            });
+        }
+        
+        function handleAttemptResult(correct, positions) {
+            if (correct) {
+                document.getElementById('studentStatus').textContent = '🎉 Correct! Well done!';
+                setTimeout(() => {
+                    nextChord();
+                }, 2000);
+            } else {
+                attempts++;
+                updateAttemptDots();
+                
+                if (attempts >= 3) {
+                    document.getElementById('studentStatus').textContent = '3 attempts reached. Showing solution...';
+                    setTimeout(() => {
+                        showSolutionToStudent();
+                    }, 1000);
+                } else {
+                    document.getElementById('studentStatus').textContent = `Incorrect. ${3 - attempts} attempts remaining.`;
+                }
+            }
+        }
+        
+        // Student mode functions
+        function startStudentMode() {
+            currentMode = 'student';
+            
+            document.getElementById('modeSelector').style.display = 'none';
+            document.getElementById('deviceSetup').style.display = 'none';
+            document.getElementById('studentInterface').style.display = 'flex';
+            
+            socket = createWebSocketConnection();
+            initStudentFretboard();
+        }
+        
+        function initStudentFretboard() {
+            const fretsContainer = document.getElementById('studentFrets');
+            const stringsContainer = document.getElementById('studentStrings');
+            const positionsContainer = document.getElementById('studentFingerPositions');
+            
+            // Clear existing content
+            fretsContainer.innerHTML = '';
+            stringsContainer.innerHTML = '';
+            positionsContainer.innerHTML = '';
+            
+            // Create frets
+            for (let i = 1; i <= 5; i++) {
+                const fret = document.createElement('div');
+                fret.className = 'fret';
+                fret.style.left = `${(i / 6) * 100}%`;
+                fretsContainer.appendChild(fret);
+            }
+            
+            // Create strings
+            for (let i = 0; i < 6; i++) {
+                const string = document.createElement('div');
+                string.className = i >= 4 ? 'string thick' : 'string';
+                string.style.top = `${(i / 5) * 100}%`;
+                stringsContainer.appendChild(string);
+            }
+            
+            // Create finger positions
+            for (let string = 0; string < 6; string++) {
+                for (let fret = 0; fret <= 5; fret++) {
+                    const dot = document.createElement('div');
+                    dot.className = 'finger-dot';
+                    dot.style.left = `${(fret / 6) * 100}%`;
+                    dot.style.top = `${(string / 5) * 100}%`;
+                    dot.style.transform = 'translate(-50%, -50%)';
+                    dot.dataset.string = string;
+                    dot.dataset.fret = fret;
+                    
+                    dot.addEventListener('click', () => placeStudentFinger(string, fret));
+                    positionsContainer.appendChild(dot);
+                }
+            }
+        }
+        
+        function setStudentChord(chord) {
+            currentChord = chord;
+            showingSolution = false;
+            userPositions = [null, null, null, null, null, null];
+            
+            document.getElementById('studentChordName').textContent = `Play: ${chord}`;
+            document.getElementById('studentInstructions').textContent = 'Place your fingers and submit your attempt';
+            
+            updateStudentDisplay();
+        }
+        
+        function placeStudentFinger(string, fret) {
+            userPositions[string] = fret;
+            updateStudentDisplay();
+        }
+        
+        function updateStudentDisplay() {
+            const dots = document.querySelectorAll('#studentFingerPositions .finger-dot');
+            const targetPositions = chords[currentChord];
+            
+            dots.forEach(dot => {
+                const string = parseInt(dot.dataset.string);
+                const fret = parseInt(dot.dataset.fret);
+                
+                dot.classList.remove('placed', 'target', 'hidden');
+                dot.textContent = '';
+                
+                if (showingSolution && targetPositions[string] === fret && fret > 0) {
+                    dot.classList.add('target');
+                    dot.textContent = fret;
+                } else if (userPositions[string] === fret && fret > 0) {
+                    dot.classList.add('placed');
+                    dot.textContent = fret;
+                } else if (fret === 0) {
+                    dot.classList.add('hidden');
+                }
+            });
+        }
+        
+        function submitAttempt() {
+            const targetPositions = chords[currentChord];
+            let correct = true;
+            
+            for (let i = 0; i < 6; i++) {
+                if (targetPositions[i] !== userPositions[i]) {
+                    correct = false;
+                    break;
+                }
+            }
+            
+            socket.send({
+                type: 'attempt_result',
+                correct: correct,
+                positions: userPositions
+            });
+            
+            if (correct) {
+                document.getElementById('studentInstructions').textContent = '🎉 Correct! Great job!';
+            } else {
+                document.getElementById('studentInstructions').textContent = 'Not quite right. Try again or wait for teacher guidance.';
+            }
+        }
+        
+        function showSolution() {
+            showingSolution = true;
+            document.getElementById('studentInstructions').textContent = 'Study the solution (orange dots) and try again';
+            updateStudentDisplay();
+        }
+        
+        function resetStudentAttempts() {
+            userPositions = [null, null, null, null, null, null];
+            showingSolution = false;
+            updateStudentDisplay();
+        }
+        
+        // Event listeners
+        document.getElementById('teacherBtn').addEventListener('click', startTeacherMode);
+        document.getElementById('studentBtn').addEventListener('click', () => {
+            const code = document.getElementById('roomCodeInput').value.toUpperCase();
+            if (code && code.length === 4) {
+                roomCode = code;
+                startStudentMode();
+            } else {
+                alert('Please enter a valid 4-character room code');
+            }
+        });
+        
+        document.getElementById('createRoomBtn').addEventListener('click', startTeacherMode);
+        document.getElementById('joinRoomBtn').addEventListener('click', () => {
+            const code = document.getElementById('roomCodeInput').value.toUpperCase();
+            if (code && code.length === 4) {
+                roomCode = code;
+                startStudentMode();
+            } else {
+                alert('Please enter a valid 4-character room code');
+            }
+        });
+        
+        document.getElementById('nextChordBtn').addEventListener('click', nextChord);
+        document.getElementById('showSolutionBtn').addEventListener('click', showSolutionToStudent);
+        document.getElementById('resetAttemptsBtn').addEventListener('click', resetAttempts);
+        document.getElementById('submitAttemptBtn').addEventListener('click', submitAttempt);
+        
+        // Allow enter key for room code
+        document.getElementById('roomCodeInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const code = e.target.value.toUpperCase();
+                if (code && code.length === 4) {
+                    roomCode = code;
+                    startStudentMode();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

@@ -521,7 +521,13 @@
         
         function generateQRCode(text) {
             // Simple QR code placeholder - in real app, use QR library
-            return `<div style="width: 100px; height: 100px; background: #333; color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; text-align: center;">${text}</div>`;
+            return `<div style="width: 120px; height: 120px; background: white; color: #333; display: flex; align-items: center; justify-content: center; font-size: 14px; text-align: center; font-weight: bold; border: 2px solid #333;">
+                <div>
+                    <div style="font-size: 10px; margin-bottom: 5px;">Room Code:</div>
+                    <div style="font-size: 18px;">${text}</div>
+                    <div style="font-size: 8px; margin-top: 5px;">Scan or enter manually</div>
+                </div>
+            </div>`;
         }
         
         // Teacher mode functions
@@ -529,13 +535,16 @@
             currentMode = 'teacher';
             roomCode = generateRoomCode();
             
-            document.getElementById('modeSelector').style.display = 'none';
-            document.getElementById('deviceSetup').style.display = 'none';
-            document.getElementById('teacherInterface').style.display = 'block';
-            
+            // Show room info in setup area first
             document.getElementById('roomCodeDisplay').textContent = roomCode;
             document.getElementById('roomInfo').style.display = 'block';
             document.getElementById('qrCode').innerHTML = generateQRCode(roomCode);
+            
+            // Hide mode selector but keep setup visible
+            document.getElementById('modeSelector').style.display = 'none';
+            
+            // Show teacher interface
+            document.getElementById('teacherInterface').style.display = 'block';
             
             socket = createWebSocketConnection();
             sendChordChallenge();
@@ -738,13 +747,11 @@
         // Event listeners
         document.getElementById('teacherBtn').addEventListener('click', startTeacherMode);
         document.getElementById('studentBtn').addEventListener('click', () => {
-            const code = document.getElementById('roomCodeInput').value.toUpperCase();
-            if (code && code.length === 4) {
-                roomCode = code;
-                startStudentMode();
-            } else {
-                alert('Please enter a valid 4-character room code');
-            }
+            document.getElementById('modeSelector').style.display = 'none';
+            // Show only the join room part of setup
+            document.getElementById('deviceSetup').querySelector('h3').textContent = 'Join Room';
+            document.getElementById('deviceSetup').querySelector('p').textContent = 'Enter the room code from the teacher screen';
+            document.getElementById('createRoomBtn').style.display = 'none';
         });
         
         document.getElementById('createRoomBtn').addEventListener('click', startTeacherMode);
